@@ -1,0 +1,21 @@
+# Obsidian writes the plugin's local settings here — never commit it
+data.json
+
+# Release archives and local build output
+*.zip
+build/
+
+# Node (not used, but keeps stray installs out)
+node_modules/
+package-lock.json
+
+# OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor noise
+.vscode/
+.idea/
+*.swp
+*~
