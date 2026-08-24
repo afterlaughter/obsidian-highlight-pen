@@ -234,6 +234,44 @@ function pushMatches(doc, re, out, skip) {
   }
 }
 
+/**
+ * Fenced code blocks, scanned line by line.
+ *
+ * This was a regex once. With the multiline flag `$` matches at the end of
+ * every line, so the lazy body terminated at the first line break and only the
+ * opening fence plus one line were ever protected. Fences are a line-oriented
+ * construct; walking the lines is both correct and easier to read.
+ */
+function fencedRegions(doc) {
+  const out = [];
+  const lines = doc.split("\n");
+  const opener = /^[ \t]{0,3}(`{3,}|~{3,})/;
+  const closer = /^[ \t]{0,3}(`{3,}|~{3,})[ \t]*\r?$/;
+
+  let offset = 0;
+  let open = null;
+
+  for (const line of lines) {
+    if (open) {
+      const close = line.match(closer);
+      // A closing fence uses the same character and is at least as long.
+      if (close && close[1][0] === open.char && close[1].length >= open.len) {
+        out.push([open.start, offset + line.length]);
+        open = null;
+      }
+    } else {
+      const start = line.match(opener);
+      if (start) open = { char: start[1][0], len: start[1].length, start: offset };
+    }
+    offset += line.length + 1;
+  }
+
+  // An unterminated fence protects everything to the end of the note.
+  if (open) out.push([open.start, doc.length]);
+
+  return out;
+}
+
 /** Ranges the pen must never write into. */
 function protectedRegions(doc) {
   const regions = [];
@@ -246,7 +284,7 @@ function protectedRegions(doc) {
     }
   }
 
-  pushMatches(doc, /^[ \t]{0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^[ \t]{0,3}\1[ \t]*(?=\r?\n|$)|$)/gm, regions);
+  for (const r of fencedRegions(doc)) regions.push(r);
   pushMatches(doc, /\$\$[\s\S]*?\$\$/g, regions);
 
   const blocks = regions.slice();
@@ -1222,6 +1260,7 @@ class PenModeSettingTab extends PluginSettingTab {
 module.exports = PenModePlugin;
 module.exports.__test = {
   protectedRegions,
+  fencedRegions,
   emphasisSpans,
   snapToSpans,
   overlapsAny,

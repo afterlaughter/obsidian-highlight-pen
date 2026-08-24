@@ -19,3 +19,7 @@ desktop.ini
 .idea/
 *.swp
 *~
+
+# Raw screen recordings (the exported GIF is committed, the source is not)
+*.mp4
+*.mkv

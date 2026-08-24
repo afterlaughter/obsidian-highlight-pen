@@ -178,9 +178,55 @@ check(
 section("protected regions, the pen must refuse");
 
 const fence = "text before\n\n```js\nconst marker = \"==not a highlight==\";\n```\n\ntext after";
-const fenceRes = paint({ tool: "highlight" }, fence, "const marker");
+const fenceRes = paint({ tools: ["highlight"] }, fence, "const marker");
 check("fenced code is untouched", fenceRes.text(), fence);
 check("fenced code raises a notice", fenceRes.notified, true);
+
+// Regression: the fence scanner was a regex with the multiline flag, so "$"
+// matched at the end of every line and only the opening fence plus one line
+// were protected. Every line of a multi-line block must be covered.
+{
+  const block = [
+    "prose above",
+    "",
+    "```js",
+    "// surely this is fine",
+    "const timeout = config.timeout || 0;",
+    "if (x) { return 1; }",
+    "```",
+    "",
+    "prose below",
+  ].join("\n");
+  const exposed = [];
+  for (const line of ["// surely this is fine", "const timeout = config.timeout || 0;", "if (x) { return 1; }"]) {
+    if (paint({ tools: ["highlight"] }, block, line).text() !== block) exposed.push(line);
+  }
+  check("every line inside a fence is protected", exposed.join(" | "), "");
+}
+
+check(
+  "an unterminated fence protects to the end of the note",
+  T.fencedRegions("intro\n\n```js\nconst a = 1;\nconst b = 2;").length,
+  1
+);
+
+check(
+  "two fences are found separately",
+  T.fencedRegions("```\na\n```\n\nmid\n\n```\nb\n```\n").length,
+  2
+);
+
+check(
+  "backticks inside a tilde fence do not close it",
+  T.fencedRegions("~~~\nsome ``` text\nmore\n~~~\n").length,
+  1
+);
+
+check(
+  "prose after a fence is still paintable",
+  paint({ tools: ["highlight"] }, "```\ncode\n```\n\nprose here", "prose here").text(),
+  "```\ncode\n```\n\n==prose here=="
+);
 
 const inline = "use the `const x = 1` form";
 check("inline code is untouched", paint({ tool: "bold" }, inline, "const x").text(), inline);
