@@ -37,9 +37,9 @@ const TOOL_ICONS = {
 const TOOL_ORDER = ["highlight", "bold", "italic", "underline", "strikethrough", "color"];
 
 /**
- * Order styles are applied in when several are mixed, innermost first.
- * Plain markdown sits closest to the text and HTML wraps around it, so the
- * result stays readable and degrades sensibly if the HTML is ever stripped.
+ * Order styles are applied in when several are mixed, innermost first. Fixed,
+ * so the same set of styles always produces the same markup no matter which
+ * order they were clicked in.
  */
 const MIX_ORDER = ["bold", "italic", "strikethrough", "highlight", "underline", "color"];
 
@@ -174,6 +174,37 @@ function markersFor(tool, s) {
   }
 }
 
+/**
+ * HTML equivalents of the markdown styles.
+ *
+ * Obsidian will not combine markdown emphasis with inline HTML in either
+ * direction: `<u>**word**</u>` shows the asterisks literally, and
+ * `**<u>word</u>**` drops the bold. `<u><strong>word</strong></u>` renders
+ * correctly, so any mix that already needs HTML uses HTML throughout.
+ */
+function htmlMarkersFor(tool, s) {
+  switch (tool) {
+    case "bold":
+      return { open: "<strong>", close: "</strong>", inOpen: /^<strong>/, inClose: /<\/strong>$/ };
+    case "italic":
+      return { open: "<em>", close: "</em>", inOpen: /^<em>/, inClose: /<\/em>$/ };
+    case "strikethrough":
+      return { open: "<s>", close: "</s>", inOpen: /^<s>/, inClose: /<\/s>$/ };
+    case "highlight":
+      if (s.highlightStyle === "mark") return markersFor("highlight", s);
+      return { open: "<mark>", close: "</mark>", inOpen: /^<mark\b[^>]*>/, inClose: /<\/mark>$/ };
+    default:
+      return markersFor(tool, s);
+  }
+}
+
+/** True when a mix contains a style that can only be written as HTML. */
+function needsHtml(tools, s) {
+  return tools.some(
+    (t) => t === "underline" || t === "color" || (t === "highlight" && s.highlightStyle === "mark")
+  );
+}
+
 function fillRegexes(m) {
   return {
     open: m.open,
@@ -228,31 +259,49 @@ function protectedRegions(doc) {
   return regions;
 }
 
-/** Complete emphasis spans, longest markers first so "**" wins over "*". */
+/**
+ * Complete emphasis spans, used to grow a partial selection out to whole runs.
+ *
+ * Styles nest, so `~~***word***~~` has to yield both the outer and the inner
+ * span. Only the asterisk and underscore families are mutually exclusive, since
+ * a run of three would otherwise also match the two- and one-character
+ * patterns; those are resolved longest-first among themselves. Everything else
+ * is free to overlap.
+ */
 function emphasisSpans(doc, skip) {
+  const guarded = skip || [];
   const spans = [];
-  const taken = (skip || []).slice();
 
-  const patterns = [
+  // Distinct delimiters, allowed to nest with anything.
+  for (const re of [
     /<mark\b[^>]*>[\s\S]*?<\/mark>/g,
     /<span\b[^>]*>[\s\S]*?<\/span>/g,
     /<u>[\s\S]*?<\/u>/g,
-    /\*\*\*[^\n]+?\*\*\*/g,
-    /___[^\n]+?___/g,
-    /\*\*[^\n]+?\*\*/g,
-    /__[^\n]+?__/g,
+    /<strong>[\s\S]*?<\/strong>/g,
+    /<em>[\s\S]*?<\/em>/g,
+    /<s>[\s\S]*?<\/s>/g,
     /==[^\n]+?==/g,
     /~~[^\n]+?~~/g,
-    /(?<![*\w])\*(?!\*)[^\n]+?(?<!\*)\*(?!\*)/g,
-    /(?<![_\w])_(?!_)[^\n]+?(?<!_)_(?!_)/g,
-  ];
+  ]) {
+    pushMatches(doc, re, spans, guarded);
+  }
 
-  for (const re of patterns) {
-    const found = [];
-    pushMatches(doc, re, found, taken);
-    for (const span of found) {
-      spans.push(span);
-      taken.push(span);
+  // Asterisk and underscore runs, longest first so "***" wins over "**".
+  // The two characters get separate exclusion lists: a run of three asterisks
+  // must not also match the two-asterisk pattern, but "_**word**_" is a real
+  // underscore span wrapped around a real asterisk span and both are wanted.
+  for (const family of [
+    [/\*\*\*[^\n]+?\*\*\*/g, /\*\*[^\n]+?\*\*/g, /(?<![*\w])\*(?!\*)[^\n]+?(?<!\*)\*(?!\*)/g],
+    [/___[^\n]+?___/g, /__[^\n]+?__/g, /(?<![_\w])_(?!_)[^\n]+?(?<!_)_(?!_)/g],
+  ]) {
+    const taken = guarded.slice();
+    for (const re of family) {
+      const found = [];
+      pushMatches(doc, re, found, taken);
+      for (const span of found) {
+        spans.push(span);
+        taken.push(span);
+      }
     }
   }
 
@@ -260,13 +309,92 @@ function emphasisSpans(doc, skip) {
 }
 
 /**
- * Strip every style in `tools` from `core`, outermost first. Returns null if
- * any of them isn't actually there, meaning this is not a "paint twice" undo.
+ * Markers for a mix, in application order.
+ *
+ * Bold and italic share the "*" character, so bold + italic is a single run of
+ * three, not "**" wrapped around "*". Left as two markers, the italic detector
+ * (which refuses to match half of a "**" pair) cannot see its own marker inside
+ * "***", so painting the mix a second time nests it instead of removing it.
+ * Folding them into one "***" marker makes both directions symmetrical.
  */
-function peelAll(core, tools, settings) {
+function mixMarkers(tools, s) {
+  return mixMarkerSets(tools, s)[0];
+}
+
+/**
+ * Both ways a mix can be written, current mode first. Wrapping uses the first;
+ * removing tries each in turn, so text styled before the HTML switch (or by an
+ * older version of the plugin) still comes off cleanly.
+ */
+function mixMarkerSets(tools, s) {
+  const html = tools.map((t) => fillRegexes(htmlMarkersFor(t, s)));
+  const md = markdownMixMarkers(tools, s);
+  return needsHtml(tools, s) ? [html, md] : [md, html];
+}
+
+function markdownMixMarkers(tools, s) {
+  const italicChar = s.italicMarker === "_" ? "_" : "*";
+  const collide = tools.includes("bold") && tools.includes("italic") && italicChar === "*";
+  const out = [];
+
+  for (const tool of tools) {
+    if (collide && tool === "italic") continue; // folded into the bold entry
+    if (collide && tool === "bold") {
+      out.push(
+        Object.assign(
+          fillRegexes({
+            open: "***",
+            close: "***",
+            inOpen: /^\*\*\*(?!\*)/,
+            inClose: /(?<!\*)\*\*\*$/,
+            outOpen: /(?<!\*)\*\*\*$/,
+            outClose: /^\*\*\*(?!\*)/,
+          }),
+          { runChar: "*" }
+        )
+      );
+      continue;
+    }
+    out.push(fillRegexes(markersFor(tool, s)));
+  }
+
+  return out;
+}
+
+/**
+ * Strip whichever of these markers happen to be there, ignoring the rest.
+ * Used to convert text already styled in the other spelling: `**word**` gaining
+ * underline has to become `<u><strong>word</strong></u>`, not
+ * `<u><strong>**word**</strong></u>`.
+ */
+function peelSome(core, markers) {
   let text = core;
-  for (let i = tools.length - 1; i >= 0; i--) {
-    const m = fillRegexes(markersFor(tools[i], settings));
+  let changed = true;
+  let guard = 0;
+  while (changed && guard++ < 12) {
+    changed = false;
+    for (let i = markers.length - 1; i >= 0; i--) {
+      const m = markers[i];
+      if (m.inOpen.test(text) && m.inClose.test(text)) {
+        const next = text.replace(m.inOpen, "").replace(m.inClose, "");
+        if (next.trim()) {
+          text = next;
+          changed = true;
+        }
+      }
+    }
+  }
+  return text;
+}
+
+/**
+ * Strip every marker from `core`, outermost first. Returns null if any of them
+ * isn't actually there, meaning this is not a "paint twice" undo.
+ */
+function peelAll(core, markers) {
+  let text = core;
+  for (let i = markers.length - 1; i >= 0; i--) {
+    const m = markers[i];
     if (!m.inOpen.test(text) || !m.inClose.test(text)) return null;
     text = text.replace(m.inOpen, "").replace(m.inClose, "");
   }
@@ -789,23 +917,38 @@ class PenModePlugin extends Plugin {
     }
 
     const core = doc.slice(a, b);
+    const sets = mixMarkerSets(tools, s);
+    const markers = sets[0];
 
     // Painting the same mix twice takes it all off. The styles nest, so the
     // outermost has to come off first. Peeling in application order would
-    // leave the inner tool looking at the outer tool's markers.
-    const peeled = peelAll(core, tools, s);
-    if (peeled !== null && peeled.trim()) {
-      editor.replaceRange(peeled, editor.offsetToPos(a), editor.offsetToPos(b));
-      editor.setCursor(editor.offsetToPos(a + peeled.length));
-      return;
+    // leave the inner marker looking at the outer one's characters. Both
+    // spellings are tried, so text written as markdown still un-styles once the
+    // mix has switched to HTML.
+    for (const set of sets) {
+      const peeled = peelAll(core, set);
+      if (peeled !== null && peeled.trim()) {
+        editor.replaceRange(peeled, editor.offsetToPos(a), editor.offsetToPos(b));
+        editor.setCursor(editor.offsetToPos(a + peeled.length));
+        return;
+      }
     }
 
     // Otherwise add whatever is missing, innermost first, leaving alone any
-    // style that is already there.
-    let text = core;
-    for (const tool of tools) {
-      const m = fillRegexes(markersFor(tool, s));
+    // style that is already there. Anything written in the other spelling is
+    // converted rather than wrapped, so the two never end up nested.
+    let text = peelSome(core, sets[1]);
+    for (const m of markers) {
       if (m.inOpen.test(text) && m.inClose.test(text)) continue;
+
+      // "**word**" gaining italic must become "***word***", not "*****word*****".
+      // Normalise an existing run of the same character before re-wrapping.
+      if (m.runChar) {
+        const c = escapeRe(m.runChar);
+        const run = text.match(new RegExp(`^(${c}{1,3})([\\s\\S]*?)\\1$`));
+        if (run && run[2].trim()) text = run[2];
+      }
+
       text = m.open + text + m.close;
     }
     editor.replaceRange(text, editor.offsetToPos(a), editor.offsetToPos(b));
@@ -1086,7 +1229,12 @@ module.exports.__test = {
   mergePalette,
   markersFor,
   fillRegexes,
+  mixMarkers,
+  mixMarkerSets,
+  htmlMarkersFor,
+  needsHtml,
   peelAll,
+  peelSome,
   MIX_ORDER,
   TOOL_ORDER,
   DEFAULT_HIGHLIGHT_PALETTE,

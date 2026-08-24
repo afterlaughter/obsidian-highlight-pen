@@ -293,15 +293,21 @@ check("migration survives a junk value", T.mergePalette(null, T.DEFAULT_TEXT_PAL
 section("mixing styles");
 
 check(
-  "bold + underline nests HTML outside markdown",
+  "a mix needing HTML uses HTML throughout",
   paint({ tools: ["bold", "underline"] }, "a word b", "word").text(),
-  "a <u>**word**</u> b"
+  "a <u><strong>word</strong></u> b"
+);
+
+check(
+  "a pure markdown mix stays markdown",
+  paint({ tools: ["bold", "strikethrough"] }, "a word b", "word").text(),
+  "a ~~**word**~~ b"
 );
 
 check(
   "bold + strike + underline + colour",
   paint({ tools: ["bold", "strikethrough", "underline", "color"] }, "a word b", "word").text(),
-  'a <span style="color: #e01b24;"><u>~~**word**~~</u></span> b'
+  'a <span style="color: #e01b24;"><u><s><strong>word</strong></s></u></span> b'
 );
 
 check(
@@ -327,16 +333,70 @@ check(
 );
 
 check(
-  "adding a style to text that already has one does not double the markers",
-  paint({ tools: ["bold", "underline"] }, "a **word** b", "**word**").text(),
-  "a <u>**word**</u> b"
+  "markdown text gaining an HTML style is converted, not wrapped",
+  paint({ tools: ["bold", "underline"] }, "a **word** b", "word").text(),
+  "a <u><strong>word</strong></u> b"
 );
 
 check(
+  "markdown text gaining a markdown style keeps markdown",
+  paint({ tools: ["bold", "italic"] }, "a **word** b", "word").text(),
+  "a ***word*** b"
+);
+
+check(
+  "text styled the old markdown way still un-styles",
+  paint({ tools: ["bold", "underline"] }, "a <u>**word**</u> b", "word").text(),
+  "a word b"
+);
+
+const mixSettings = { italicMarker: "*", highlightStyle: "markdown", textColor: "#e01b24", highlightColor: "#ffe814" };
+check(
   "a partial mix is not treated as an undo",
-  T.peelAll("<u>word</u>", ["bold", "underline"], { italicMarker: "*", highlightStyle: "markdown" }),
+  T.peelAll("<u>word</u>", T.mixMarkers(["bold", "underline"], mixSettings)),
   null
 );
+check(
+  "bold + italic fold into a single *** marker",
+  T.mixMarkers(["bold", "italic"], mixSettings).map((m) => m.open).join("|"),
+  "***"
+);
+check(
+  "bold + italic stay separate when italic uses underscores",
+  T.mixMarkers(["bold", "italic"], { ...mixSettings, italicMarker: "_" }).map((m) => m.open).join("|"),
+  "**|_"
+);
+check(
+  "nested spans are all found, outer and inner",
+  T.emphasisSpans("a ~~***word***~~ b", []).length,
+  2
+);
+
+section("every mix round-trips when you select the visible word");
+
+// The gesture a user actually makes: Live Preview hides the markers, so the
+// selection covers the word, not the markup. Every combination of 2, 3 and 4
+// styles, for both italic markers.
+{
+  const ALL = ["highlight", "bold", "italic", "underline", "strikethrough", "color"];
+  const combos = [];
+  for (let n = 2; n <= 4; n++) {
+    const rec = (start, acc) => {
+      if (acc.length === n) return combos.push(acc.slice());
+      for (let i = start; i < ALL.length; i++) { acc.push(ALL[i]); rec(i + 1, acc); acc.pop(); }
+    };
+    rec(0, []);
+  }
+  let broken = [];
+  for (const italicMarker of ["*", "_"]) {
+    for (const tools of combos) {
+      const on = paint({ tools, italicMarker }, "a word b", "word").text();
+      const off = paint({ tools, italicMarker }, on, "word").text();
+      if (off !== "a word b") broken.push(`${italicMarker} ${tools.join("+")}: ${on} -> ${off}`);
+    }
+  }
+  check(`all ${combos.length * 2} style combinations round-trip`, broken.join(" | "), "");
+}
 
 const mixRes = paint({ tools: ["bold", "underline", "color"] }, "a word b", "word");
 check("mixed cursor is a real position", mixRes.cursorValid(), true);

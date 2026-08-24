@@ -13,10 +13,14 @@ First public release.
 ### Added
 
 - **Style mixing.** Several styles can apply to one selection. Click styles in
-  the toolbar to add or remove them; `Ctrl`/`Cmd`+click drops back to one.
-  Markdown nests innermost and HTML outermost regardless of the order they were
-  picked, so the plain-markdown styles survive if the HTML is ever stripped.
-  Painting the same mix again removes all of it.
+  the toolbar to add or remove them; `Ctrl`/`Cmd`+click drops back to one. The
+  nesting order is fixed, so a given set of styles always produces the same
+  markup. Painting the same mix again removes all of it.
+- Mixes involving underline or text colour are written entirely as HTML.
+  Obsidian does not combine markdown emphasis with inline HTML in either
+  direction, so `<u>**word**</u>` renders the asterisks literally and
+  `**<u>word</u>**` loses the bold. All-HTML is the only spelling that renders.
+  Single styles are unaffected and stay as plain markdown.
 - **Protection for code, math and links.** The pen refuses to write into fenced
   or inline code, inline or display math, wiki links, the target half of a
   markdown link, and YAML frontmatter. Link text is still paintable. A short

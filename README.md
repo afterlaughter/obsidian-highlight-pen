@@ -45,15 +45,23 @@ Click a style to switch to it. Click the colour icon to pick a colour.
 
 ### Mixing styles
 
-Click more than one style and they all apply at once. Bold plus underline plus a colour gives you:
+Click more than one style and they all apply at once. The nesting order is fixed, so the same set of styles always produces the same markup no matter which order you clicked them in.
+
+Mixes of markdown styles stay markdown:
 
 ```markdown
-<span style="color: #e01b24;"><u>**important**</u></span>
+~~***important***~~
 ```
 
-Markdown always ends up innermost and HTML outermost, whatever order you clicked them in, so if the HTML is ever stripped out, the bold survives.
+Mixes that involve underline or text colour are written entirely as HTML:
 
-Painting the same mix again removes all of it. `Ctrl`/`⌘`+click a style to drop back to that one alone.
+```markdown
+<span style="color: #e01b24;"><u><strong>important</strong></u></span>
+```
+
+That is deliberate. Obsidian will not combine markdown emphasis with inline HTML in either direction: `<u>**word**</u>` shows the asterisks literally, and `**<u>word</u>**` loses the bold. Writing the whole mix as HTML is the only spelling that renders correctly. A single style on its own is always plain markdown, so nothing changes unless you actually mix.
+
+Painting the same mix again removes all of it, in either spelling. `Ctrl`/`⌘`+click a style to drop back to that one alone.
 
 ### Layouts
 
@@ -112,6 +120,7 @@ Open them at **Settings → Highlight Pen**, listed in the left sidebar under Co
 Not everything the pen writes is standard markdown, and it's worth knowing which is which:
 
 - `**bold**`, `*italic*` and `~~strikethrough~~` are CommonMark. They travel anywhere.
+- Mixes involving underline or colour are HTML throughout (`<strong>`, `<em>`, `<s>`, `<mark>`, `<u>`, `<span>`), because markdown and inline HTML do not combine in Obsidian.
 - `==highlight==` is an Obsidian and extended-markdown convention, not CommonMark. Some renderers show the `==` literally.
 - Underline and text colour have no markdown equivalent at all, so they're written as `<u>` and `<span style="…">`. Obsidian renders them and they survive export to HTML, but not conversion to plain markdown.
 
