@@ -1,7 +1,7 @@
 {
   "id": "highlight-pen",
   "name": "Highlight Pen",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "minAppVersion": "1.4.0",
   "description": "Turn the cursor into a pen: pick a style once and every selection you make gets highlighted, bolded, italicised, underlined, struck through or coloured.",
   "author": "Alberto Vittadello aka Afterlaughter",
