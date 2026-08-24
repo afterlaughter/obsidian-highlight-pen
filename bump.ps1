@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Updates manifest.json and versions.json, commits both, creates the tag
-    (no 'v' prefix — Obsidian requires the bare version) and pushes.
+    (no 'v' prefix, as Obsidian requires the bare version) and pushes.
     Pushing the tag is what fires .github/workflows/release.yml.
 
 .EXAMPLE

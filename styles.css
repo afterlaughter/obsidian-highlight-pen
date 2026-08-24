@@ -1,21 +1,102 @@
 .pen-mode-status {
   display: flex;
   align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  padding: 0 8px;
+  gap: 2px;
+  padding: 0 6px;
   border-radius: var(--radius-s);
   color: var(--text-muted);
 }
 
-.pen-mode-status:hover {
+/* ---- on/off button ---- */
+
+.pen-mode-power {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 5px;
+  margin-right: 3px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  color: var(--text-muted);
+  background-color: var(--background-modifier-border);
+}
+
+.pen-mode-power:hover {
+  background-color: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.pen-mode-power.is-on {
+  color: var(--text-on-accent);
+  background-color: var(--interactive-accent);
+}
+
+.pen-mode-power .svg-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.pen-mode-power-label {
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-semibold);
+  letter-spacing: 0.04em;
+  line-height: 1;
+}
+
+/* ---- toolbar layout ---- */
+
+.pen-mode-status.is-toolbar {
+  gap: 1px;
+}
+
+.pen-mode-tool {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  opacity: 0.6;
+  color: var(--text-muted);
+}
+
+.pen-mode-tool .svg-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.pen-mode-tool:hover {
+  opacity: 1;
   background-color: var(--background-modifier-hover);
 }
 
-.pen-mode-status.is-on {
+.pen-mode-tool.is-active {
+  opacity: 1;
   color: var(--text-normal);
-  font-weight: var(--font-semibold);
+  background-color: var(--background-modifier-hover);
 }
+
+/* Only tint the active tool while the pen is actually live. */
+.pen-mode-status.is-on .pen-mode-tool.is-active {
+  color: var(--text-accent);
+}
+
+/* Merged colour tool + colour picker: the chip shows the current colour. */
+.pen-mode-color {
+  padding-bottom: 5px;
+}
+
+.pen-mode-color-chip {
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 1px;
+}
+
+/* ---- compact layout ---- */
 
 .pen-mode-swatch {
   width: 10px;
@@ -23,25 +104,65 @@
   border-radius: 2px;
   border: 1px solid var(--background-modifier-border);
   background-color: var(--text-faint);
+  margin: 0 4px 0 2px;
 }
 
 .pen-mode-swatch.is-plain {
   background-color: var(--text-muted);
 }
 
-.pen-mode-status.is-on .pen-mode-swatch {
-  box-shadow: 0 0 0 2px var(--background-modifier-border-hover);
-}
-
 .pen-mode-label {
   font-size: var(--font-ui-smaller);
+  margin-right: 2px;
 }
 
-/* Pen cursor while the pen is on */
+.pen-mode-status.is-on .pen-mode-label {
+  color: var(--text-normal);
+  font-weight: var(--font-semibold);
+}
+
+/* ---- more-options caret ---- */
+
+.pen-mode-caret {
+  font-size: var(--font-ui-smaller);
+  line-height: 1;
+  opacity: 0.55;
+  padding: 3px;
+  border-radius: var(--radius-s);
+  cursor: pointer;
+}
+
+.pen-mode-caret:hover {
+  opacity: 1;
+  background-color: var(--background-modifier-hover);
+}
+
+/* ---- editor ---- */
+
 body.pen-mode-active .cm-content {
   cursor: crosshair;
 }
 
 .pen-mode-ribbon-on {
   color: var(--text-accent);
+}
+
+/* ---- settings intro ---- */
+
+.pen-mode-intro {
+  margin: 0 0 1.5em;
+  padding: 0.75em 1em;
+  border-left: 3px solid var(--interactive-accent);
+  border-radius: var(--radius-s);
+  background-color: var(--background-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-ui-small);
+}
+
+.pen-mode-intro p {
+  margin: 0 0 0.5em;
+}
+
+.pen-mode-intro p:last-child {
+  margin-bottom: 0;
 }

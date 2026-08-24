@@ -9,7 +9,7 @@
         build\<version>\highlight-pen\{main.js, manifest.json, styles.css}
         build\highlight-pen-<version>.zip
 
-    build\ is gitignored — it is a scratch shelf of past versions, not history.
+    build\ is gitignored. It is a scratch shelf of past versions, not history.
     Git tags are the real version record.
 
 .EXAMPLE

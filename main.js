@@ -1,6 +1,15 @@
 "use strict";
 
-const { Plugin, PluginSettingTab, Setting, MarkdownView, Menu, Notice } = require("obsidian");
+const {
+  Plugin,
+  PluginSettingTab,
+  Setting,
+  MarkdownView,
+  Menu,
+  Notice,
+  setIcon,
+  Platform,
+} = require("obsidian");
 
 /* ------------------------------------------------------------------ *
  * Defaults
@@ -24,33 +33,54 @@ const TOOL_ICONS = {
   color: "palette",
 };
 
+/** Display order in the toolbar and menus. */
 const TOOL_ORDER = ["highlight", "bold", "italic", "underline", "strikethrough", "color"];
+
+/**
+ * Order styles are applied in when several are mixed, innermost first.
+ * Plain markdown sits closest to the text and HTML wraps around it, so the
+ * result stays readable and degrades sensibly if the HTML is ever stripped.
+ */
+const MIX_ORDER = ["bold", "italic", "strikethrough", "highlight", "underline", "color"];
+
+const DEFAULT_HIGHLIGHT_PALETTE = [
+  { name: "Yellow", color: "#ffe814" },
+  { name: "Green", color: "#7bf59b" },
+  { name: "Aqua", color: "#4fe8e0" },
+  { name: "Blue", color: "#6bb8ff" },
+  { name: "Pink", color: "#ff7ab8" },
+  { name: "Orange", color: "#ffa53d" },
+];
+
+const DEFAULT_TEXT_PALETTE = [
+  { name: "Red", color: "#e01b24" },
+  { name: "Orange", color: "#f57c00" },
+  { name: "Aqua", color: "#00b8b0" },
+  { name: "Blue", color: "#1a73e8" },
+  { name: "Green", color: "#00a152" },
+  { name: "Purple", color: "#8e44ff" },
+];
 
 const DEFAULT_SETTINGS = {
   penOn: false,
-  tool: "highlight",
-  highlightColor: "#ffd83d",
-  textColor: "#c0392b",
+  tools: ["highlight"],
+  highlightColor: "#ffe814",
+  textColor: "#e01b24",
   highlightStyle: "markdown", // "markdown" (==text==) or "mark" (<mark style=...>)
   italicMarker: "*",
   oneShot: false,
   keyboardSelection: true,
   minLength: 2,
   showStatusBar: true,
-  highlightPalette: [
-    { name: "Yellow", color: "#ffd83d" },
-    { name: "Green", color: "#a6e3a1" },
-    { name: "Blue", color: "#9ec5fe" },
-    { name: "Pink", color: "#f5a9c8" },
-    { name: "Orange", color: "#ffb86c" },
-  ],
-  textPalette: [
-    { name: "Red", color: "#c0392b" },
-    { name: "Blue", color: "#2e6fdf" },
-    { name: "Green", color: "#2e8b57" },
-    { name: "Purple", color: "#7d5bbe" },
-  ],
+  statusBarMode: "toolbar", // "toolbar" (every style) or "compact" (active style only)
+  guardMarkup: true,
+  allowMixing: true,
+  introShown: false,
+  highlightPalette: DEFAULT_HIGHLIGHT_PALETTE.map((e) => ({ ...e })),
+  textPalette: DEFAULT_TEXT_PALETTE.map((e) => ({ ...e })),
 };
+
+const FALLBACK_COLORS = { highlight: "#ffe814", text: "#e01b24" };
 
 /* ------------------------------------------------------------------ *
  * Helpers
@@ -61,15 +91,38 @@ function escapeRe(str) {
 }
 
 /**
- * Returns the opening/closing markers for a tool, plus the regexes used to
- * detect that the markers are already there (so painting twice removes them).
+ * Colour values end up inside an HTML style attribute that gets written into
+ * the user's note. data.json is a plain file that syncs between machines, so a
+ * corrupted or hand-edited value could otherwise break out of the attribute and
+ * inject live markup. Only hex is ever allowed through.
  */
+function safeColor(value, fallback) {
+  return typeof value === "string" && /^#[0-9a-f]{3,8}$/i.test(value.trim())
+    ? value.trim()
+    : fallback;
+}
+
+/**
+ * Saved palettes take precedence over the defaults, so a user who installed an
+ * earlier version would never see colours added later. Append anything missing
+ * by name rather than overwriting what they've customised.
+ */
+function mergePalette(saved, defaults) {
+  const list = Array.isArray(saved) ? saved.filter((e) => e && typeof e.name === "string") : [];
+  const have = new Set(list.map((e) => e.name.toLowerCase()));
+  for (const entry of defaults) {
+    if (!have.has(entry.name.toLowerCase())) list.push({ ...entry });
+  }
+  return list;
+}
+
 function markersFor(tool, s) {
   switch (tool) {
     case "highlight":
       if (s.highlightStyle === "mark") {
+        const c = safeColor(s.highlightColor, FALLBACK_COLORS.highlight);
         return {
-          open: `<mark style="background-color: ${s.highlightColor};">`,
+          open: `<mark style="background-color: ${c};">`,
           close: "</mark>",
           inOpen: /^<mark\b[^>]*>/,
           inClose: /<\/mark>$/,
@@ -83,7 +136,7 @@ function markersFor(tool, s) {
     case "italic": {
       // A single "*" must not match one half of a "**" bold pair, or the italic
       // pen quietly turns **bold** into *italic*. Same for "_" and "__".
-      const mk = s.italicMarker;
+      const mk = s.italicMarker === "_" ? "_" : "*";
       const e = escapeRe(mk);
       return {
         open: mk,
@@ -105,29 +158,20 @@ function markersFor(tool, s) {
         outOpen: /<u>$/,
         outClose: /^<\/u>/,
       };
-    case "color":
+    case "color": {
+      const c = safeColor(s.textColor, FALLBACK_COLORS.text);
       return {
-        open: `<span style="color: ${s.textColor};">`,
+        open: `<span style="color: ${c};">`,
         close: "</span>",
         inOpen: /^<span\b[^>]*>/,
         inClose: /<\/span>$/,
         outOpen: /<span\b[^>]*>$/,
         outClose: /^<\/span>/,
       };
+    }
     default:
       return { open: "==", close: "==" };
   }
-}
-
-/**
- * Where the cursor ends up after writing `text` starting at `start`.
- * Counting characters only works on one line — a multi-line insert has to
- * advance the line number and restart `ch` from the last line.
- */
-function endOfInsert(start, text) {
-  const lines = text.split("\n");
-  if (lines.length === 1) return { line: start.line, ch: start.ch + text.length };
-  return { line: start.line + lines.length - 1, ch: lines[lines.length - 1].length };
 }
 
 function fillRegexes(m) {
@@ -142,22 +186,139 @@ function fillRegexes(m) {
 }
 
 /* ------------------------------------------------------------------ *
+ * Markup awareness
+ * ------------------------------------------------------------------ */
+
+function pushMatches(doc, re, out, skip) {
+  re.lastIndex = 0;
+  let m;
+  while ((m = re.exec(doc)) !== null) {
+    if (m[0].length === 0) {
+      re.lastIndex++;
+      continue;
+    }
+    const start = m.index;
+    const end = m.index + m[0].length;
+    if (!skip || !skip.some(([s, e]) => start < e && end > s)) out.push([start, end]);
+  }
+}
+
+/** Ranges the pen must never write into. */
+function protectedRegions(doc) {
+  const regions = [];
+
+  if (/^---\r?\n/.test(doc)) {
+    const close = doc.search(/\r?\n---[ \t]*(\r?\n|$)/);
+    if (close !== -1) {
+      const after = doc.indexOf("\n", close + 1);
+      regions.push([0, after === -1 ? doc.length : after]);
+    }
+  }
+
+  pushMatches(doc, /^[ \t]{0,3}(`{3,}|~{3,})[^\n]*\n[\s\S]*?(?:^[ \t]{0,3}\1[ \t]*(?=\r?\n|$)|$)/gm, regions);
+  pushMatches(doc, /\$\$[\s\S]*?\$\$/g, regions);
+
+  const blocks = regions.slice();
+
+  pushMatches(doc, /(`+)[^`\n]*?\1/g, regions, blocks);
+  pushMatches(doc, /(?<!\$)\$(?!\$)[^\n$]+?\$(?!\$)/g, regions, blocks);
+  pushMatches(doc, /!?\[\[[^\]\n]*\]\]/g, regions, blocks);
+  pushMatches(doc, /\]\([^)\n]*\)/g, regions, blocks);
+
+  return regions;
+}
+
+/** Complete emphasis spans, longest markers first so "**" wins over "*". */
+function emphasisSpans(doc, skip) {
+  const spans = [];
+  const taken = (skip || []).slice();
+
+  const patterns = [
+    /<mark\b[^>]*>[\s\S]*?<\/mark>/g,
+    /<span\b[^>]*>[\s\S]*?<\/span>/g,
+    /<u>[\s\S]*?<\/u>/g,
+    /\*\*\*[^\n]+?\*\*\*/g,
+    /___[^\n]+?___/g,
+    /\*\*[^\n]+?\*\*/g,
+    /__[^\n]+?__/g,
+    /==[^\n]+?==/g,
+    /~~[^\n]+?~~/g,
+    /(?<![*\w])\*(?!\*)[^\n]+?(?<!\*)\*(?!\*)/g,
+    /(?<![_\w])_(?!_)[^\n]+?(?<!_)_(?!_)/g,
+  ];
+
+  for (const re of patterns) {
+    const found = [];
+    pushMatches(doc, re, found, taken);
+    for (const span of found) {
+      spans.push(span);
+      taken.push(span);
+    }
+  }
+
+  return spans;
+}
+
+/**
+ * Strip every style in `tools` from `core`, outermost first. Returns null if
+ * any of them isn't actually there, meaning this is not a "paint twice" undo.
+ */
+function peelAll(core, tools, settings) {
+  let text = core;
+  for (let i = tools.length - 1; i >= 0; i--) {
+    const m = fillRegexes(markersFor(tools[i], settings));
+    if (!m.inOpen.test(text) || !m.inClose.test(text)) return null;
+    text = text.replace(m.inOpen, "").replace(m.inClose, "");
+  }
+  return text;
+}
+
+function overlapsAny(a, b, regions) {
+  return regions.some(([s, e]) => a < e && b > s);
+}
+
+/** Grow [a, b] so it never cuts a formatted run in half. */
+function snapToSpans(a, b, spans) {
+  let changed = true;
+  let guard = 0;
+  while (changed && guard++ < 20) {
+    changed = false;
+    for (const [s, e] of spans) {
+      const overlapping = a < e && b > s;
+      const contained = a <= s && b >= e;
+      if (overlapping && !contained) {
+        if (s < a) {
+          a = s;
+          changed = true;
+        }
+        if (e > b) {
+          b = e;
+          changed = true;
+        }
+      }
+    }
+  }
+  return [a, b];
+}
+
+/* ------------------------------------------------------------------ *
  * Plugin
  * ------------------------------------------------------------------ */
 
 class PenModePlugin extends Plugin {
   async onload() {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
+    this.migrateSettings();
+
     this.busy = false;
     this.pending = null;
+    this.lastNotice = 0;
 
     this.addSettingTab(new PenModeSettingTab(this.app, this));
     this.buildStatusBar();
 
-    this.ribbonEl = this.addRibbonIcon("highlighter", "Toggle pen mode", () => this.togglePen());
+    this.ribbonEl = this.addRibbonIcon("highlighter", "Toggle Highlight Pen", () => this.togglePen());
     this.refreshRibbon();
-
-    /* --- commands --- */
 
     this.addCommand({
       id: "toggle-pen",
@@ -168,15 +329,15 @@ class PenModePlugin extends Plugin {
     this.addCommand({
       id: "apply-once",
       name: "Apply current style to selection",
-      editorCallback: (editor) => this.applyTool(editor),
+      editorCallback: (editor) => this.applyTools(editor),
     });
 
     this.addCommand({
       id: "cycle-tool",
       name: "Next style",
       callback: () => {
-        const i = TOOL_ORDER.indexOf(this.settings.tool);
-        this.setTool(TOOL_ORDER[(i + 1) % TOOL_ORDER.length]);
+        const i = TOOL_ORDER.indexOf(this.primaryTool());
+        this.setTools([TOOL_ORDER[(i + 1) % TOOL_ORDER.length]]);
       },
     });
 
@@ -186,15 +347,37 @@ class PenModePlugin extends Plugin {
       callback: () => this.openMenu(),
     });
 
+    this.addCommand({
+      id: "clear-mix",
+      name: "Reset to a single style",
+      callback: () => this.setTools([this.primaryTool()]),
+    });
+
     for (const tool of TOOL_ORDER) {
       this.addCommand({
         id: `set-tool-${tool}`,
         name: `Set style: ${TOOL_LABELS[tool].toLowerCase()}`,
-        callback: () => this.setTool(tool),
+        callback: () => this.setTools([tool]),
+      });
+      this.addCommand({
+        id: `toggle-tool-${tool}`,
+        name: `Add or remove style: ${TOOL_LABELS[tool].toLowerCase()}`,
+        callback: () => this.toggleTool(tool),
       });
     }
 
-    /* --- selection listeners --- */
+    // Said once, ever. The select-to-style idea isn't guessable from the
+    // status bar alone, and there's nowhere else in the app to explain it.
+    if (!this.settings.introShown) {
+      this.settings.introShown = true;
+      this.saveSettings();
+      this.app.workspace.onLayoutReady(() => {
+        new Notice(
+          "Highlight Pen: switch it ON in the status bar, on the bottom right of the window, then select any text to style it. Select it again to remove the style.",
+          8000
+        );
+      });
+    }
 
     this.registerDomEvent(document, "mouseup", (evt) => {
       const target = evt.target;
@@ -209,7 +392,6 @@ class PenModePlugin extends Plugin {
       this.handleSelection();
     });
 
-    // Mobile / touch selection.
     this.registerDomEvent(document, "touchend", (evt) => {
       const target = evt.target;
       if (!target || typeof target.closest !== "function") return;
@@ -223,11 +405,50 @@ class PenModePlugin extends Plugin {
     document.body.removeClass("pen-mode-active");
   }
 
+  /** Bring settings written by earlier versions up to date. */
+  migrateSettings() {
+    const s = this.settings;
+
+    // 1.0.x stored a single `tool` string.
+    if (!Array.isArray(s.tools) || s.tools.length === 0) {
+      s.tools = [TOOL_ORDER.includes(s.tool) ? s.tool : "highlight"];
+    }
+    s.tools = s.tools.filter((t) => TOOL_ORDER.includes(t));
+    if (s.tools.length === 0) s.tools = ["highlight"];
+    delete s.tool;
+
+    // Colours added in later versions would otherwise never appear.
+    s.highlightPalette = mergePalette(s.highlightPalette, DEFAULT_HIGHLIGHT_PALETTE);
+    s.textPalette = mergePalette(s.textPalette, DEFAULT_TEXT_PALETTE);
+
+    s.highlightColor = safeColor(s.highlightColor, FALLBACK_COLORS.highlight);
+    s.textColor = safeColor(s.textColor, FALLBACK_COLORS.text);
+  }
+
   async saveSettings() {
     await this.saveData(this.settings);
   }
 
   /* ---------------- state ---------------- */
+
+  primaryTool() {
+    return this.settings.tools[0] || "highlight";
+  }
+
+  /** Active styles in the order they get applied, innermost first. */
+  activeTools() {
+    return MIX_ORDER.filter((t) => this.settings.tools.includes(t));
+  }
+
+  /** Active styles in toolbar order, so compact matches the toolbar's layout. */
+  displayTools() {
+    const active = TOOL_ORDER.filter((t) => this.settings.tools.includes(t));
+    return active.length ? active : [this.primaryTool()];
+  }
+
+  isActive(tool) {
+    return this.settings.tools.includes(tool);
+  }
 
   togglePen() {
     this.setPen(!this.settings.penOn);
@@ -241,28 +462,51 @@ class PenModePlugin extends Plugin {
     document.body.toggleClass("pen-mode-active", on);
   }
 
-  setTool(tool) {
-    this.settings.tool = tool;
+  setTools(tools) {
+    const next = tools.filter((t) => TOOL_ORDER.includes(t));
+    this.settings.tools = next.length ? next : ["highlight"];
     this.saveSettings();
     this.refreshStatusBar();
+  }
+
+  /** Add or remove one style from the mix, never emptying it. */
+  toggleTool(tool) {
+    if (!this.settings.allowMixing) return this.setTools([tool]);
+    const set = this.settings.tools.slice();
+    const i = set.indexOf(tool);
+    if (i === -1) set.push(tool);
+    else if (set.length > 1) set.splice(i, 1);
+    this.setTools(set);
   }
 
   setColor(hex) {
-    if (this.settings.tool === "color") this.settings.textColor = hex;
-    else this.settings.highlightColor = hex;
+    const safe = safeColor(hex, null);
+    if (!safe) return;
+    if (this.isActive("color") && !this.isActive("highlight")) this.settings.textColor = safe;
+    else if (this.isActive("highlight") && !this.isActive("color")) this.settings.highlightColor = safe;
+    else this.settings.textColor = safe;
     this.saveSettings();
     this.refreshStatusBar();
   }
 
-  currentColor() {
-    return this.settings.tool === "color" ? this.settings.textColor : this.settings.highlightColor;
+  colorContext() {
+    if (this.isActive("color")) return "text";
+    if (this.isActive("highlight") && this.settings.highlightStyle === "mark") return "highlight";
+    return null;
   }
 
-  usesColor() {
-    return (
-      this.settings.tool === "color" ||
-      (this.settings.tool === "highlight" && this.settings.highlightStyle === "mark")
-    );
+  currentColor() {
+    return this.colorContext() === "highlight"
+      ? safeColor(this.settings.highlightColor, FALLBACK_COLORS.highlight)
+      : safeColor(this.settings.textColor, FALLBACK_COLORS.text);
+  }
+
+  /** Dragging over a code block shouldn't produce a wall of notices. */
+  notify(message) {
+    const now = Date.now();
+    if (now - this.lastNotice < 1500) return;
+    this.lastNotice = now;
+    new Notice(message, 2500);
   }
 
   /* ---------------- status bar ---------------- */
@@ -271,7 +515,6 @@ class PenModePlugin extends Plugin {
     if (!this.settings.showStatusBar) return;
     this.statusEl = this.addStatusBarItem();
     this.statusEl.addClass("pen-mode-status");
-    this.statusEl.addEventListener("click", () => this.togglePen());
     this.statusEl.addEventListener("contextmenu", (evt) => {
       evt.preventDefault();
       this.openMenu(evt);
@@ -279,26 +522,104 @@ class PenModePlugin extends Plugin {
     this.refreshStatusBar();
   }
 
+  makeButton(parent, cls, icon, label) {
+    const el = parent.createSpan({ cls });
+    if (icon) setIcon(el, icon);
+    el.setAttribute("aria-label", label);
+    // Without this the tooltip renders over the toolbar itself.
+    el.setAttribute("data-tooltip-position", "top");
+    return el;
+  }
+
+  /** One tool button, shared by both layouts. */
+  addToolButton(tool) {
+    const mod = Platform.isMacOS ? "⌘" : "Ctrl";
+    const active = this.isActive(tool);
+
+    let label = TOOL_LABELS[tool];
+    if (this.settings.allowMixing) {
+      label += active ? ": click to remove" : ": click to add";
+      label += `, ${mod}+click for this style alone`;
+    }
+    if (tool === "color") label += active ? " · pick a colour" : "";
+
+    const btn = this.makeButton(
+      this.statusEl,
+      `pen-mode-tool${tool === "color" ? " pen-mode-color" : ""}`,
+      TOOL_ICONS[tool],
+      label
+    );
+    btn.toggleClass("is-active", active);
+
+    if (tool === "color") {
+      btn.createSpan({ cls: "pen-mode-color-chip" }).style.backgroundColor = safeColor(
+        this.settings.textColor,
+        FALLBACK_COLORS.text
+      );
+    }
+
+    btn.addEventListener("click", (evt) => {
+      evt.stopPropagation();
+      evt.preventDefault();
+      // Plain click toggles the style in or out of the mix; the modifier is the
+      // escape hatch back to a single style.
+      const solo = !this.settings.allowMixing || evt.ctrlKey || evt.metaKey;
+      if (solo) this.setTools([tool]);
+      else this.toggleTool(tool);
+      if (!this.settings.penOn && this.isActive(tool)) this.setPen(true);
+      if (tool === "color" && this.isActive("color")) this.openColorMenu(evt);
+    });
+
+    return btn;
+  }
+
   refreshStatusBar() {
     if (!this.statusEl) return;
     this.statusEl.empty();
-    this.statusEl.toggleClass("is-on", this.settings.penOn);
 
-    const swatch = this.statusEl.createSpan({ cls: "pen-mode-swatch" });
-    if (this.usesColor()) swatch.style.backgroundColor = this.currentColor();
-    else swatch.addClass("is-plain");
+    const on = this.settings.penOn;
+    const toolbar = this.settings.statusBarMode === "toolbar";
+    this.statusEl.toggleClass("is-on", on);
+    this.statusEl.toggleClass("is-toolbar", toolbar);
+    this.statusEl.toggleClass("is-compact", !toolbar);
 
-    this.statusEl.createSpan({
-      cls: "pen-mode-label",
-      text: `${TOOL_LABELS[this.settings.tool]} ${this.settings.penOn ? "on" : "off"}`,
-    });
-
+    // Identifies the group. A row of icons in a shared status bar otherwise
+    // gives no clue whose they are or what arming them does.
+    const names = this.displayTools().map((t) => TOOL_LABELS[t].toLowerCase()).join(" + ");
     this.statusEl.setAttribute(
       "aria-label",
-      this.settings.penOn
-        ? "Pen is on — click to turn off, right-click to change style"
-        : "Pen is off — click to turn on, right-click to change style"
+      on
+        ? `Highlight Pen is on. Select text to apply ${names}`
+        : `Highlight Pen: switch ON, then select text to apply ${names}`
     );
+    this.statusEl.setAttribute("data-tooltip-position", "top");
+
+    /* On/off, an explicit button in both layouts. */
+    const power = this.makeButton(
+      this.statusEl,
+      "pen-mode-power",
+      "power",
+      on ? "Pen is on. Click to turn off." : "Pen is off. Click to turn on."
+    );
+    power.toggleClass("is-on", on);
+    power.createSpan({ cls: "pen-mode-power-label", text: on ? "ON" : "OFF" });
+    power.addEventListener("click", (evt) => {
+      evt.stopPropagation();
+      evt.preventDefault();
+      this.togglePen();
+    });
+
+    // Toolbar offers every style; compact shows only the ones that are on.
+    const shown = toolbar ? TOOL_ORDER : this.displayTools();
+    for (const tool of shown) this.addToolButton(tool);
+
+    const caret = this.makeButton(this.statusEl, "pen-mode-caret", null, "More options");
+    caret.setText("▴"); // menus open upward from the status bar
+    caret.addEventListener("click", (evt) => {
+      evt.stopPropagation();
+      evt.preventDefault();
+      this.openMenu(evt);
+    });
   }
 
   refreshRibbon() {
@@ -306,34 +627,74 @@ class PenModePlugin extends Plugin {
     this.ribbonEl.toggleClass("pen-mode-ribbon-on", this.settings.penOn);
   }
 
+  currentPalette() {
+    return this.colorContext() === "highlight"
+      ? this.settings.highlightPalette
+      : this.settings.textPalette;
+  }
+
+  addColorItems(menu) {
+    for (const entry of this.currentPalette()) {
+      const hex = safeColor(entry.color, null);
+      if (!hex) continue;
+      menu.addItem((item) =>
+        item
+          .setTitle(entry.name)
+          .setChecked(this.currentColor().toLowerCase() === hex.toLowerCase())
+          .onClick(() => this.setColor(hex))
+      );
+    }
+  }
+
+  /** Colours only, which is what the merged colour button opens. */
+  openColorMenu(evt) {
+    const menu = new Menu();
+    this.addColorItems(menu);
+    this.showMenu(menu, evt);
+  }
+
   openMenu(evt) {
     const menu = new Menu();
+    const mixing = this.settings.allowMixing;
 
     for (const tool of TOOL_ORDER) {
       menu.addItem((item) =>
         item
           .setTitle(TOOL_LABELS[tool])
           .setIcon(TOOL_ICONS[tool])
-          .setChecked(this.settings.tool === tool)
-          .onClick(() => this.setTool(tool))
+          .setChecked(this.isActive(tool))
+          .onClick(() => (mixing ? this.toggleTool(tool) : this.setTools([tool])))
       );
     }
 
-    if (this.usesColor()) {
-      const palette =
-        this.settings.tool === "color" ? this.settings.textPalette : this.settings.highlightPalette;
+    if (this.colorContext()) {
       menu.addSeparator();
-      for (const entry of palette) {
-        menu.addItem((item) =>
-          item
-            .setTitle(entry.name)
-            .setChecked(this.currentColor().toLowerCase() === entry.color.toLowerCase())
-            .onClick(() => this.setColor(entry.color))
-        );
-      }
+      this.addColorItems(menu);
     }
 
     menu.addSeparator();
+
+    menu.addItem((item) =>
+      item
+        .setTitle(this.settings.statusBarMode === "toolbar" ? "Compact layout" : "Toolbar layout")
+        .setIcon("layout")
+        .onClick(async () => {
+          this.settings.statusBarMode =
+            this.settings.statusBarMode === "toolbar" ? "compact" : "toolbar";
+          await this.saveSettings();
+          this.refreshStatusBar();
+        })
+    );
+
+    if (mixing && this.activeTools().length > 1) {
+      menu.addItem((item) =>
+        item
+          .setTitle("Reset to one style")
+          .setIcon("rotate-ccw")
+          .onClick(() => this.setTools([this.primaryTool()]))
+      );
+    }
+
     menu.addItem((item) =>
       item
         .setTitle(this.settings.penOn ? "Turn pen off" : "Turn pen on")
@@ -341,7 +702,11 @@ class PenModePlugin extends Plugin {
         .onClick(() => this.togglePen())
     );
 
-    if (evt) menu.showAtMouseEvent(evt);
+    this.showMenu(menu, evt);
+  }
+
+  showMenu(menu, evt) {
+    if (evt && typeof evt.clientX === "number") menu.showAtMouseEvent(evt);
     else if (this.statusEl) {
       const rect = this.statusEl.getBoundingClientRect();
       menu.showAtPosition({ x: rect.left, y: rect.top });
@@ -363,16 +728,15 @@ class PenModePlugin extends Plugin {
     if (!editor || !editor.somethingSelected()) return;
     if (editor.getSelection().trim().length < this.settings.minLength) return;
 
-    // Claim the pen now, not inside the timeout — otherwise two selection
+    // Claim the pen now, not inside the timeout. Otherwise two selection
     // events landing within the settle window both get through the guard.
     this.busy = true;
 
-    // Let CodeMirror settle the selection before we rewrite the document.
     this.pending = window.setTimeout(() => {
       this.pending = null;
       try {
         if (!editor.somethingSelected()) return;
-        this.applyTool(editor);
+        this.applyTools(editor);
         if (this.settings.oneShot) this.setPen(false);
       } finally {
         this.busy = false;
@@ -380,49 +744,102 @@ class PenModePlugin extends Plugin {
     }, 10);
   }
 
-  applyTool(editor) {
-    const m = fillRegexes(markersFor(this.settings.tool, this.settings));
+  /**
+   * Apply every active style in turn, innermost first. Each pass either wraps
+   * or strips that one style, so painting the same mix twice removes it all.
+   */
+  applyTools(editor) {
+    const s = this.settings;
+    const doc = editor.getValue();
 
-    let from = editor.getCursor("from");
-    let to = editor.getCursor("to");
-    let text = editor.getRange(from, to);
-    if (!text) return;
+    let a = editor.posToOffset(editor.getCursor("from"));
+    let b = editor.posToOffset(editor.getCursor("to"));
+    if (a === b) return;
 
-    // Keep leading/trailing spaces outside the markers.
-    const lead = text.match(/^[ \t]*/)[0];
-    const trail = text.match(/[ \t]*$/)[0];
-    if (lead) from = { line: from.line, ch: from.ch + lead.length };
-    if (trail) to = { line: to.line, ch: to.ch - trail.length };
+    // Keep leading/trailing whitespace outside the markers.
+    while (a < b && /\s/.test(doc[a])) a++;
+    while (b > a && /\s/.test(doc[b - 1])) b--;
+    if (a >= b) return;
 
-    const core = editor.getRange(from, to);
-    if (!core.trim()) return;
+    const guarded = s.guardMarkup ? protectedRegions(doc) : [];
 
-    // 1. Markers inside the selection → strip them.
-    if (m.inOpen.test(core) && m.inClose.test(core)) {
-      const stripped = core.replace(m.inOpen, "").replace(m.inClose, "");
-      editor.replaceRange(stripped, from, to);
-      editor.setCursor(endOfInsert(from, stripped));
+    if (overlapsAny(a, b, guarded)) {
+      this.notify("Pen skipped: that selection touches code, math, a link or frontmatter.");
       return;
     }
 
-    // 2. Markers just outside the selection → strip those.
-    const before = editor.getLine(from.line).slice(0, from.ch);
-    const after = editor.getLine(to.line).slice(to.ch);
-    const openMatch = before.match(m.outOpen);
-    const closeMatch = after.match(m.outClose);
-    if (openMatch && closeMatch) {
-      // Trailing first, so the leading offsets stay valid.
-      editor.replaceRange("", to, { line: to.line, ch: to.ch + closeMatch[0].length });
-      const newFrom = { line: from.line, ch: from.ch - openMatch[0].length };
-      editor.replaceRange("", newFrom, from);
-      editor.setCursor(endOfInsert(newFrom, core));
+    if (s.guardMarkup) {
+      [a, b] = snapToSpans(a, b, emphasisSpans(doc, guarded));
+      if (overlapsAny(a, b, guarded)) {
+        this.notify("Pen skipped: that run reaches into code, math or a link.");
+        return;
+      }
+    }
+
+    if (!doc.slice(a, b).trim()) return;
+
+    const tools = this.activeTools();
+
+    // A single style keeps the original path, which also handles markers that
+    // sit just outside the selection.
+    if (tools.length === 1) {
+      const [na, nb] = this.applyOne(editor, tools[0], a, b);
+      editor.setCursor(editor.offsetToPos(nb));
       return;
+    }
+
+    const core = doc.slice(a, b);
+
+    // Painting the same mix twice takes it all off. The styles nest, so the
+    // outermost has to come off first. Peeling in application order would
+    // leave the inner tool looking at the outer tool's markers.
+    const peeled = peelAll(core, tools, s);
+    if (peeled !== null && peeled.trim()) {
+      editor.replaceRange(peeled, editor.offsetToPos(a), editor.offsetToPos(b));
+      editor.setCursor(editor.offsetToPos(a + peeled.length));
+      return;
+    }
+
+    // Otherwise add whatever is missing, innermost first, leaving alone any
+    // style that is already there.
+    let text = core;
+    for (const tool of tools) {
+      const m = fillRegexes(markersFor(tool, s));
+      if (m.inOpen.test(text) && m.inClose.test(text)) continue;
+      text = m.open + text + m.close;
+    }
+    editor.replaceRange(text, editor.offsetToPos(a), editor.offsetToPos(b));
+    editor.setCursor(editor.offsetToPos(a + text.length));
+  }
+
+  /** One style, one pass. Returns the new [start, end] of the styled run. */
+  applyOne(editor, tool, a, b) {
+    const m = fillRegexes(markersFor(tool, this.settings));
+    const doc = editor.getValue();
+    const core = doc.slice(a, b);
+
+    const write = (text, from, to) => {
+      editor.replaceRange(text, editor.offsetToPos(from), editor.offsetToPos(to));
+    };
+
+    // 1. Markers inside the run → strip them.
+    if (m.inOpen.test(core) && m.inClose.test(core)) {
+      const stripped = core.replace(m.inOpen, "").replace(m.inClose, "");
+      write(stripped, a, b);
+      return [a, a + stripped.length];
+    }
+
+    // 2. Markers just outside the run → strip those.
+    const openMatch = doc.slice(0, a).match(m.outOpen);
+    const closeMatch = doc.slice(b).match(m.outClose);
+    if (openMatch && closeMatch) {
+      write(core, a - openMatch[0].length, b + closeMatch[0].length);
+      return [a - openMatch[0].length, b - openMatch[0].length];
     }
 
     // 3. Otherwise wrap.
-    const wrapped = m.open + core + m.close;
-    editor.replaceRange(wrapped, from, to);
-    editor.setCursor(endOfInsert(from, wrapped));
+    write(m.open + core + m.close, a, b);
+    return [a, b + m.open.length + m.close.length];
   }
 }
 
@@ -441,6 +858,16 @@ class PenModeSettingTab extends PluginSettingTab {
     const s = this.plugin.settings;
     containerEl.empty();
 
+    const intro = containerEl.createDiv({ cls: "pen-mode-intro" });
+    intro.createEl("p", {
+      text:
+        "Switch the pen ON in the status bar, on the bottom right of the Obsidian window, then select any text in the editor. It gets styled the moment you release the mouse. No menus, no keyboard shortcuts.",
+    });
+    intro.createEl("p", {
+      text:
+        "Selecting styled text again with the same pen removes the style, so painting twice undoes it. Click several styles in the toolbar to apply them together.",
+    });
+
     new Setting(containerEl)
       .setName("Pen")
       .setDesc("While the pen is on, anything you select gets styled.")
@@ -451,15 +878,32 @@ class PenModeSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName("Style")
-      .setDesc("What the pen writes.")
-      .addDropdown((d) => {
-        for (const tool of TOOL_ORDER) d.addOption(tool, TOOL_LABELS[tool]);
-        d.setValue(s.tool).onChange((v) => {
-          this.plugin.setTool(v);
-          this.display();
-        });
-      });
+      .setName("Mix styles")
+      .setDesc(
+        `Let several styles apply at once. Click a toolbar icon to add or remove it, or ${
+          Platform.isMacOS ? "⌘" : "Ctrl"
+        }+click to jump back to that style on its own. With this off, clicking a style always replaces the current one.`
+      )
+      .addToggle((t) =>
+        t.setValue(s.allowMixing).onChange(async (v) => {
+          s.allowMixing = v;
+          if (!v) this.plugin.setTools([this.plugin.primaryTool()]);
+          await this.plugin.saveSettings();
+          this.plugin.refreshStatusBar();
+        })
+      );
+
+    new Setting(containerEl)
+      .setName("Protect code, math and links")
+      .setDesc(
+        "Refuse to paint inside code blocks, inline code, math, wiki links, link targets and frontmatter, and grow a partial selection out to the whole formatted run rather than splitting it."
+      )
+      .addToggle((t) =>
+        t.setValue(s.guardMarkup).onChange(async (v) => {
+          s.guardMarkup = v;
+          await this.plugin.saveSettings();
+        })
+      );
 
     new Setting(containerEl)
       .setName("Highlight output")
@@ -521,8 +965,21 @@ class PenModeSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName("Status bar layout")
+      .setDesc("How the pen looks in the status bar, on the bottom right of the Obsidian window. Toolbar shows every style. Compact shows only the styles that are on.")
+      .addDropdown((d) => {
+        d.addOption("toolbar", "Toolbar, every style");
+        d.addOption("compact", "Compact, active style only");
+        d.setValue(s.statusBarMode).onChange(async (v) => {
+          s.statusBarMode = v;
+          await this.plugin.saveSettings();
+          this.plugin.refreshStatusBar();
+        });
+      });
+
+    new Setting(containerEl)
       .setName("Status bar control")
-      .setDesc("Show the pen in the status bar. Restart Obsidian after changing this.")
+      .setDesc("Show the pen in the status bar, on the bottom right of the Obsidian window. Restart Obsidian after changing this.")
       .addToggle((t) =>
         t.setValue(s.showStatusBar).onChange(async (v) => {
           s.showStatusBar = v;
@@ -535,7 +992,8 @@ class PenModeSettingTab extends PluginSettingTab {
       containerEl,
       "Highlight colours",
       "Used when highlight output is set to HTML.",
-      s.highlightPalette,
+      "highlightPalette",
+      DEFAULT_HIGHLIGHT_PALETTE,
       (hex) => {
         s.highlightColor = hex;
       }
@@ -545,14 +1003,18 @@ class PenModeSettingTab extends PluginSettingTab {
       containerEl,
       "Text colours",
       "Used by the text colour pen.",
-      s.textPalette,
+      "textPalette",
+      DEFAULT_TEXT_PALETTE,
       (hex) => {
         s.textColor = hex;
       }
     );
   }
 
-  renderPalette(containerEl, title, desc, palette, onPick) {
+  renderPalette(containerEl, title, desc, key, defaults, onPick) {
+    const s = this.plugin.settings;
+    const palette = s[key];
+
     new Setting(containerEl).setName(title).setDesc(desc).setHeading();
 
     palette.forEach((entry, i) => {
@@ -568,7 +1030,7 @@ class PenModeSettingTab extends PluginSettingTab {
         )
         .addColorPicker((c) =>
           c.setValue(entry.color).onChange(async (v) => {
-            entry.color = v;
+            entry.color = safeColor(v, entry.color);
             await this.plugin.saveSettings();
             this.plugin.refreshStatusBar();
           })
@@ -578,7 +1040,7 @@ class PenModeSettingTab extends PluginSettingTab {
             .setIcon("check")
             .setTooltip("Use this colour now")
             .onClick(async () => {
-              onPick(entry.color);
+              onPick(safeColor(entry.color, entry.color));
               await this.plugin.saveSettings();
               this.plugin.refreshStatusBar();
             })
@@ -595,14 +1057,38 @@ class PenModeSettingTab extends PluginSettingTab {
         );
     });
 
-    new Setting(containerEl).addButton((b) =>
-      b.setButtonText("Add colour").onClick(async () => {
-        palette.push({ name: "New colour", color: "#cccccc" });
-        await this.plugin.saveSettings();
-        this.display();
-      })
-    );
+    new Setting(containerEl)
+      .addButton((b) =>
+        b.setButtonText("Add colour").onClick(async () => {
+          palette.push({ name: "New colour", color: "#cccccc" });
+          await this.plugin.saveSettings();
+          this.display();
+        })
+      )
+      .addButton((b) =>
+        b.setButtonText("Reset to defaults").onClick(async () => {
+          s[key] = defaults.map((e) => ({ ...e }));
+          await this.plugin.saveSettings();
+          this.plugin.refreshStatusBar();
+          this.display();
+        })
+      );
   }
 }
 
 module.exports = PenModePlugin;
+module.exports.__test = {
+  protectedRegions,
+  emphasisSpans,
+  snapToSpans,
+  overlapsAny,
+  safeColor,
+  mergePalette,
+  markersFor,
+  fillRegexes,
+  peelAll,
+  MIX_ORDER,
+  TOOL_ORDER,
+  DEFAULT_HIGHLIGHT_PALETTE,
+  DEFAULT_TEXT_PALETTE,
+};

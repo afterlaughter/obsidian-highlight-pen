@@ -1,4 +1,4 @@
-# Obsidian writes the plugin's local settings here — never commit it
+# Obsidian writes the plugin's local settings here. Never commit it.
 data.json
 
 # Release archives and local build output

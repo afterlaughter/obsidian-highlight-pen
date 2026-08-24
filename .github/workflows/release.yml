@@ -25,7 +25,7 @@ jobs:
 
           if [ "$TAG" != "$MANIFEST_VERSION" ]; then
             echo "::error title=Version mismatch::Tag '$TAG' does not match manifest.json version '$MANIFEST_VERSION'."
-            echo "Obsidian release tags carry no 'v' prefix - the tag must be exactly '$MANIFEST_VERSION'."
+            echo "Obsidian release tags carry no 'v' prefix. The tag must be exactly '$MANIFEST_VERSION'."
             echo "Fix it with:  git tag -d $TAG && git push --delete origin $TAG"
             exit 1
           fi
@@ -57,7 +57,7 @@ jobs:
           # which turns any re-run of a successful job into a red X. Upload
           # over the top instead so re-running is always safe.
           if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
-            echo "Release ${GITHUB_REF_NAME} already exists - replacing its assets."
+            echo "Release ${GITHUB_REF_NAME} already exists, replacing its assets."
             gh release upload "${GITHUB_REF_NAME}" "${ASSETS[@]}" --clobber
           else
             gh release create "${GITHUB_REF_NAME}" \
