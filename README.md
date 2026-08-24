@@ -4,13 +4,7 @@ Switch the pen on, then just select text. It gets styled the moment you release 
 
 Select the same text again and the style comes off. Painting twice is undo.
 
-<!--
-  TODO before submitting: a GIF here does more than every paragraph below it.
-  Record about 6 seconds: pen on, drag over a few phrases, drag over one again to
-  remove it. Save as docs/demo.gif and uncomment:
-
-  ![Highlight Pen in action](docs/demo.gif)
--->
+![Highlight Pen in action](docs/demo-basic.gif)
 
 ## Why you might want it
 
@@ -43,6 +37,10 @@ That's the whole thing. The toolbar next to the switch holds the six styles:
 
 Click a style to switch to it. Click the colour icon to pick a colour.
 
+![Choosing a text colour from the pen menu](docs/demo-colours.gif)
+
+Colour is a single style rather than one style per colour, so painting text that is already coloured takes the old colour off. Paint it again to put the new one on.
+
 ### Mixing styles
 
 Click more than one style and they all apply at once. The nesting order is fixed, so the same set of styles always produces the same markup no matter which order you clicked them in.
@@ -63,12 +61,24 @@ That is deliberate. Obsidian will not combine markdown emphasis with inline HTML
 
 Painting the same mix again removes all of it, in either spelling. `Ctrl`/`⌘`+click a style to drop back to that one alone.
 
+![Stacking bold, italic and underline, then taking all three off](docs/demo-styles.gif)
+
 ### Layouts
 
 The status bar has two looks, switchable from the **▴** arrow:
 
 - **Toolbar**: all six styles on show
 - **Compact**: only the styles currently active
+
+![The toolbar layout, showing all six styles](docs/toolbar.png)
+
+![The compact layout, showing only the active styles](docs/compact.png)
+
+Right-click the pen, or use the arrow, for the full menu:
+
+![The style menu, with the layout and power switches at the foot of it](docs/menu.png)
+
+Picking **Text colour** adds the palette to the same menu.
 
 ### Hotkeys worth setting
 
@@ -97,6 +107,8 @@ The pen refuses to write into places where markers would break something:
 You get a brief notice when it declines. If your selection only partly covers something already formatted, the pen grows it out to the whole run rather than splitting the markers and leaving broken markdown behind.
 
 Both behaviours are the **Protect code, math and links** setting, on by default.
+
+![The pen declining to write inside a fenced code block](docs/demo-code.gif)
 
 ## Highlight Pen settings
 
@@ -138,7 +150,7 @@ Requires Obsidian 1.4.0 or newer. No build step, no dependencies. `main.js` is p
 node test.js
 ```
 
-59 assertions covering marker collisions, protected regions, selection snapping, style mixing and colour validation. No dependencies; it stubs the Obsidian API and drives the plugin against a fake editor.
+71 assertions covering marker collisions, protected regions, selection snapping, style mixing and colour validation. No dependencies; it stubs the Obsidian API and drives the plugin against a fake editor.
 
 To work against a live plugin, junction the repo into a scratch vault:
 
