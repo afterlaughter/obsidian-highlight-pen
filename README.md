@@ -14,10 +14,10 @@ Switch the pen on, then just select text. It gets styled the moment you release 
 Select the same text again and the style comes off. Painting twice is undo.
 
 <p align="center">
-  <a href="https://github.com/user-attachments/assets/fd0950d9-7b5a-445f-a014-f2b36c4d95c8"><img src="docs/hero.gif" alt="Selecting text with the pen on, the highlight landing, then the same stroke taking it off" width="100%"></a>
+  <a href="https://github.com/user-attachments/assets/fd0950d9-7b5a-445f-a014-f2b36c4d95c8"><img src="docs/hero.gif" alt="The pen switched on, text selected and styled, painted again to undo, styles stacked, colours picked, and code left alone" width="100%"></a>
 </p>
 
-<p align="center"><sub>Select, styled, painted again to undo. The <a href="https://github.com/user-attachments/assets/fd0950d9-7b5a-445f-a014-f2b36c4d95c8">full thirty second tour</a> is 1080p, no sound.</sub></p>
+<p align="center"><sub><b>The whole tour, looping.</b> <a href="https://github.com/user-attachments/assets/fd0950d9-7b5a-445f-a014-f2b36c4d95c8">The original</a> is 1080p, no sound.</sub></p>
 
 ## Why you might want it
 
