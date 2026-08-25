@@ -28,7 +28,15 @@ desktop.ini
 !docs/hero.mp4
 
 # Design source. Large, binary, and not needed to build or install the plugin.
-design/
+design/*
+
+# ...except the render sources and the page-sized vector exports, which are small
+# and worth keeping. Note the pattern excludes contents rather than the folder
+# itself, because git will not look inside a folder it has already excluded.
+!design/sources/
+!design/pdf/
+design/pdf/*
+!design/pdf/*.pdf
 
 # Intermediate video encodes
 *.webm

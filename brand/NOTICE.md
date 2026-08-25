@@ -3,9 +3,9 @@
 The code in this repository is MIT licensed. See [LICENSE](../LICENSE).
 
 **The brand is not.** Everything in this `brand/` folder, plus the name
-"Highlight Pen" and the `docs/banner.png` and `docs/social-preview.png` images
-built from it, is excluded from the MIT licence and remains
-© 2026 Alberto Vittadello, all rights reserved.
+"Highlight Pen" and the `docs/banner.png`, `docs/masthead.png` and
+`docs/social-preview.png` images built from it, is excluded from the MIT licence
+and remains © 2026 Alberto Vittadello, all rights reserved.
 
 That covers:
 
