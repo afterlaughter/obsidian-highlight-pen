@@ -23,3 +23,12 @@ desktop.ini
 # Raw screen recordings (the exported GIF is committed, the source is not)
 *.mp4
 *.mkv
+
+# ...except the hero video, which the README links to
+!docs/hero.mp4
+
+# Design source. Large, binary, and not needed to build or install the plugin.
+design/
+
+# Intermediate video encodes
+*.webm

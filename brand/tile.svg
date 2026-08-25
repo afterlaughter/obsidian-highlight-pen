@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="glow" cx="0.5" cy="0.48" r="0.6">
+      <stop offset="0" stop-color="#8E44FF" stop-opacity="0.4"/><stop offset="1" stop-color="#8E44FF" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="grid" width="5.334" height="5.334" patternUnits="userSpaceOnUse">
+      <path d="M5.334 0 V5.334 M0 5.334 H5.334" stroke="#8E44FF" stroke-opacity="0.14" stroke-width="0.45" fill="none"/>
+    </pattern>
+    <clipPath id="c"><rect width="64" height="64" rx="14"/></clipPath>
+  </defs>
+  <g clip-path="url(#c)">
+    <rect width="64" height="64" fill="#0B0910"/>
+    <rect width="64" height="64" fill="url(#grid)"/>
+    <rect width="64" height="64" fill="url(#glow)"/>
+    <path d="M23 20 H53 L42.5 29.5 H12.5 Z" fill="#8E44FF"/>
+    <path d="M23 35 H53 L42.5 44.5 H12.5 Z" fill="#FFE814"/>
+  </g>
+  <rect x="0.5" y="0.5" width="63" height="63" rx="13.5" fill="none" stroke="#8E44FF" stroke-opacity="0.55"/>
+</svg>

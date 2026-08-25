@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="420" viewBox="0 0 1600 420">
+<defs>
+<radialGradient id="glow0" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#8E44FF" stop-opacity="0.32"/><stop offset="0.62" stop-color="#8E44FF" stop-opacity="0"/><stop offset="1" stop-color="#8E44FF" stop-opacity="0"/></radialGradient>
+<radialGradient id="glow1" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#FFE814" stop-opacity="0.12"/><stop offset="0.62" stop-color="#FFE814" stop-opacity="0"/><stop offset="1" stop-color="#FFE814" stop-opacity="0"/></radialGradient>
+<pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse"><path d="M0.5 0 V36 M0 0.5 H36" stroke="#8E44FF" stroke-opacity="0.10" stroke-width="1" fill="none"/></pattern>
+</defs>
+<g id="Background"><rect width="1600" height="420" fill="#0B0910"/></g>
+<g id="Grid"><rect width="1600" height="420" fill="url(#grid)"/></g>
+<g id="Glow">
+<circle cx="180" cy="50" r="380" fill="url(#glow0)"/>
+<circle cx="1460" cy="420" r="260" fill="url(#glow1)"/>
+</g>
+<g id="Wordmark"><g transform="translate(85.560 175.047) scale(0.55605)"><g transform="translate(0 -76.41) scale(2.4633) translate(-10 -18)"><path d="M22 18 H56 L44 29 H10 Z" fill="#8E44FF"/><path d="M22 35 H56 L44 46 H10 Z" fill="#FFE814"/></g>
+  <path d="M186.76 -86.46 H833.56 L802.52 12.56 H155.72 Z" fill="#FFE814"/>
+  <path d="M6.800000000000001 0.0H20.5V-31.0H46.900000000000006V0.0H60.6V-73.9H46.900000000000006V-44.1H20.5V-73.9H6.800000000000001Z M86.3 0.0H100.0V-73.9H86.3Z M122.0 -37.1C122.0 -15.5 139.5 1.3 162.2 1.3C184.0 1.3 200.8 -15.8 200.8 -35.9V-37.7H152.5V-24.900000000000002H183.10000000000002C179.1 -16.7 171.1 -11.9 161.4 -11.9C146.9 -11.9 135.8 -22.8 135.8 -36.9C135.8 -50.800000000000004 146.0 -62.0 160.6 -62.0C169.2 -62.0 176.3 -58.6 180.9 -52.2H197.0C192.2 -65.5 177.0 -75.2 160.9 -75.2C139.3 -75.2 122.0 -58.300000000000004 122.0 -37.1Z M221.3 0.0H235.0V-31.0H261.4V0.0H275.1V-73.9H261.4V-44.1H235.0V-73.9H221.3Z M300.8 0.0H337.1V-13.100000000000001H314.5V-73.9H300.8Z M356.3 0.0H370.0V-73.9H356.3Z M392.0 -37.1C392.0 -15.5 409.5 1.3 432.2 1.3C454.0 1.3 470.8 -15.8 470.8 -35.9V-37.7H422.5V-24.900000000000002H453.1C449.1 -16.7 441.1 -11.9 431.4 -11.9C416.9 -11.9 405.8 -22.8 405.8 -36.9C405.8 -50.800000000000004 416.0 -62.0 430.6 -62.0C439.2 -62.0 446.3 -58.6 450.9 -52.2H467.0C462.2 -65.5 447.0 -75.2 430.9 -75.2C409.3 -75.2 392.0 -58.300000000000004 392.0 -37.1Z M491.3 0.0H505.0V-31.0H531.4V0.0H545.1V-73.9H531.4V-44.1H505.0V-73.9H491.3Z M564.7 -60.800000000000004H578.4V0.0H592.1V-60.800000000000004H605.8V-73.9H564.7Z" transform="translate(201.21 0)" fill="#0B0910"/>
+  <path d="M6.800000000000001 0.0H20.5V-28.1H24.900000000000002C35.4 -28.1 40.2 -28.900000000000002 44.300000000000004 -31.400000000000002C50.300000000000004 -35.1 54.0 -42.6 54.0 -51.1C54.0 -59.6 50.400000000000006 -66.60000000000001 44.0 -70.5C39.800000000000004 -73.0 34.9 -73.9 25.1 -73.9H6.800000000000001ZM20.5 -41.2V-60.800000000000004H25.1C35.6 -60.800000000000004 40.2 -58.7 40.2 -50.900000000000006C40.2 -44.5 36.800000000000004 -41.2 24.5 -41.2Z M74.3 0.0H114.0V-13.100000000000001H88.0V-30.3H112.9V-43.400000000000006H88.0V-60.800000000000004H114.0V-73.9H74.3Z M137.8 0.0H151.5V-53.7L182.4 0.0H197.7V-73.9H184.0V-20.1L153.4 -73.9H137.8Z" transform="translate(854.04 0)" fill="#F6F4FB"/></g></g>
+<g id="Pens">
+<path d="M85.00 260.58 H118.00 L113.00 298.58 H80.00 Z" fill="rgb(255, 232, 20)" stroke="rgb(255, 232, 20)" stroke-width="1"/>
+<path d="M132.00 260.58 H165.00 L160.00 298.58 H127.00 Z" fill="rgb(21, 18, 28)" stroke="rgba(142, 68, 255, 0.42)" stroke-width="1"/>
+<path d="M179.00 260.58 H212.00 L207.00 298.58 H174.00 Z" fill="rgb(21, 18, 28)" stroke="rgba(142, 68, 255, 0.42)" stroke-width="1"/>
+<path d="M226.00 260.58 H259.00 L254.00 298.58 H221.00 Z" fill="rgb(21, 18, 28)" stroke="rgba(142, 68, 255, 0.42)" stroke-width="1"/>
+<path d="M273.00 260.58 H306.00 L301.00 298.58 H268.00 Z" fill="rgb(21, 18, 28)" stroke="rgba(142, 68, 255, 0.42)" stroke-width="1"/>
+<path d="M320.00 260.58 H353.00 L348.00 298.58 H315.00 Z" fill="rgb(21, 18, 28)" stroke="rgba(142, 68, 255, 0.42)" stroke-width="1"/>
+<g transform="translate(89.50 270.08) scale(0.4130) translate(-10 -18)" fill="#0B0910"><path d="M22 18 H56 L44 29 H10 Z"/><path d="M22 35 H56 L44 46 H10 Z"/></g>
+<g transform="translate(324.50 270.08) scale(0.7917)"><path d="M12 21a9 9 0 1 1 0-18c4.97 0 9 3.58 9 8 0 2.5-2 4-4.5 4H14a2 2 0 0 0-1.4 3.4A1.6 1.6 0 0 1 12 21Z" fill="none" stroke="#E4DEF2" stroke-width="1.9"/><circle cx="8" cy="9.5" r="1.15" fill="#E4DEF2"/><circle cx="12" cy="7" r="1.15" fill="#E4DEF2"/><circle cx="16" cy="9.5" r="1.15" fill="#E4DEF2"/></g>
+<rect x="322" y="291.58" width="24" height="2" fill="rgb(142, 68, 255)"/>
+</g>
+<g id="Swatches">
+<g fill="rgb(255, 232, 20)"><rect x="375.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(123, 245, 155)"><rect x="402.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(79, 232, 224)"><rect x="429.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(107, 184, 255)"><rect x="456.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(255, 122, 184)"><rect x="483.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(255, 165, 61)"><rect x="510.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(224, 27, 36)"><rect x="555.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(245, 124, 0)"><rect x="582.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(0, 184, 176)"><rect x="609.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(26, 115, 232)"><rect x="636.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(0, 161, 82)"><rect x="663.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+<g fill="rgb(142, 68, 255)"><rect x="690.00" y="269.58" width="20.00" height="20.00" rx="4.00"/></g>
+</g>
+<g id="Type">
+<text x="80.00" y="233.58" fill="rgb(207, 200, 223)" font-family="'TeX Gyre Heros','Helvetica Neue',Helvetica,Arial,sans-serif" font-size="24" xml:space="preserve">Switch the pen on, then </text>
+<text x="337.27" y="233.58" fill="rgb(255, 255, 255)" font-family="'TeX Gyre Heros','Helvetica Neue',Helvetica,Arial,sans-serif" font-size="24" font-weight="700" xml:space="preserve">just select text.</text>
+<text x="140.48" y="284.58" fill="rgb(228, 222, 242)" font-family="'TeX Gyre Adventor','URW Gothic','Century Gothic',sans-serif" font-size="19" font-weight="700" xml:space="preserve">B</text>
+<text x="190.33" y="284.58" fill="rgb(228, 222, 242)" font-family="'TeX Gyre Adventor','URW Gothic','Century Gothic',sans-serif" font-size="19" font-weight="700" font-style="italic" xml:space="preserve">I</text>
+<text x="233.91" y="284.58" fill="rgb(228, 222, 242)" font-family="'TeX Gyre Adventor','URW Gothic','Century Gothic',sans-serif" font-size="19" font-weight="700" xml:space="preserve">U</text>
+<rect x="233.91" y="286.67" width="12.16" height="1.43" fill="rgb(228, 222, 242)"/>
+<text x="282.05" y="284.58" fill="rgb(228, 222, 242)" font-family="'TeX Gyre Adventor','URW Gothic','Century Gothic',sans-serif" font-size="19" font-weight="700" xml:space="preserve">S</text>
+<text x="1351.56" y="178.21" fill="rgb(107, 99, 128)" font-family="'DejaVu Sans Mono','Menlo','Consolas',monospace" font-size="14" letter-spacing="2.8" xml:space="preserve">OBSIDIAN PLUGIN</text>
+<text x="1385.25" y="207.60" fill="rgb(107, 99, 128)" font-family="'DejaVu Sans Mono','Menlo','Consolas',monospace" font-size="14" letter-spacing="2.8" xml:space="preserve">DESKTOP ONLY</text>
+<text x="1295.42" y="236.99" fill="rgb(107, 99, 128)" font-family="'DejaVu Sans Mono','Menlo','Consolas',monospace" font-size="14" letter-spacing="2.8" xml:space="preserve">FREE AND OPEN SOURCE</text>
+<rect x="277.05" y="278.33" width="19.88" height="2.5" fill="rgb(228, 222, 242)"/>
+</g>
+</svg>

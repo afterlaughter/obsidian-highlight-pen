@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs><filter id="g" x="-60%" y="-60%" width="220%" height="220%">
+    <feGaussianBlur stdDeviation="2.4" result="b"/>
+    <feComponentTransfer in="b" result="b2"><feFuncA type="linear" slope="0.75"/></feComponentTransfer>
+    <feMerge><feMergeNode in="b2"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter></defs>
+  <g filter="url(#g)">
+    <path d="M22 18 H56 L44 29 H10 Z" fill="#8E44FF"/>
+    <path d="M22 35 H56 L44 46 H10 Z" fill="#FFE814"/>
+  </g>
+</svg>

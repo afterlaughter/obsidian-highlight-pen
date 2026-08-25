@@ -1,10 +1,27 @@
-# Highlight Pen
+<p align="center">
+  <img src="docs/banner.png" alt="Highlight Pen, an Obsidian plugin" width="100%">
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/github/v/release/afterlaughter/obsidian-highlight-pen?style=flat-square&color=8E44FF&labelColor=15121C&label=release" alt="Latest release">
+  <img src="https://img.shields.io/badge/obsidian-1.4.0%2B-8E44FF?style=flat-square&labelColor=15121C" alt="Requires Obsidian 1.4.0 or newer">
+  <img src="https://img.shields.io/badge/desktop%20only-15121C?style=flat-square&labelColor=15121C&color=6E6682" alt="Desktop only">
+  <img src="https://img.shields.io/badge/licence-MIT-FFE814?style=flat-square&labelColor=15121C" alt="MIT licence">
+</p>
 
 Switch the pen on, then just select text. It gets styled the moment you release the mouse. No menus, no hotkeys, no `==` typed by hand.
 
 Select the same text again and the style comes off. Painting twice is undo.
 
-![Highlight Pen in action](docs/demo-basic.gif)
+<!-- To make the video play inline: drag docs/hero.mp4 into any GitHub comment box,
+     copy the https://github.com/user-attachments/... URL it returns, and paste that
+     URL on a line of its own in place of the linked poster below. -->
+
+<p align="center">
+  <a href="docs/hero.mp4"><img src="docs/hero-poster.png" alt="Watch the thirty second tour" width="100%"></a>
+  <br>
+  <sub><b>Thirty seconds, start to finish.</b> Click to play, 1080p.</sub>
+</p>
 
 ## Why you might want it
 
@@ -24,6 +41,8 @@ Highlight Pen inverts it. Choose a style once, leave the pen on, and marking up 
 2. Click **OFF** so it reads **ON**. The cursor becomes a crosshair over the editor.
 3. Select text.
 
+![Two phrases highlighted, then one painted again to take it off](docs/demo-basic.gif)
+
 That's the whole thing. The toolbar next to the switch holds the six styles:
 
 | | Style | Writes |
@@ -35,7 +54,7 @@ That's the whole thing. The toolbar next to the switch holds the six styles:
 | ~~S~~ | Strikethrough | `~~text~~` |
 | 🎨 | Text colour | `<span style="color: …">` |
 
-Click a style to switch to it. Click the colour icon to pick a colour.
+Click a style to switch to it. Click the colour icon to pick a colour. Six highlight colours and six text colours ship as defaults, and both palettes are yours to rename and edit.
 
 ![Choosing a text colour from the pen menu](docs/demo-colours.gif)
 
@@ -65,20 +84,19 @@ Painting the same mix again removes all of it, in either spelling. `Ctrl`/`⌘`+
 
 ### Layouts
 
-The status bar has two looks, switchable from the **▴** arrow:
+The status bar has two looks, switchable from the **▴** arrow.
 
-- **Toolbar**: all six styles on show
-- **Compact**: only the styles currently active
+**Toolbar**, all six styles on show:
 
-![The toolbar layout, showing all six styles](docs/toolbar.png)
+![The toolbar layout](docs/toolbar.png)
 
-![The compact layout, showing only the active styles](docs/compact.png)
+**Compact**, only the styles currently active:
 
-Right-click the pen, or use the arrow, for the full menu:
+![The compact layout](docs/compact.png)
 
-![The style menu, with the layout and power switches at the foot of it](docs/menu.png)
+Right-click the pen, or use the arrow, for the full menu. Picking **Text colour** adds the palette to the same menu.
 
-Picking **Text colour** adds the palette to the same menu.
+<img src="docs/menu.png" alt="The style menu, with the layout and power switches at the foot of it" width="440">
 
 ### Hotkeys worth setting
 
@@ -160,6 +178,8 @@ cmd /c mklink /J "<vault>\.obsidian\plugins\highlight-pen" "<path to this repo>"
 
 Don't do that inside a vault synced by Dropbox, Google Drive or similar. A junction is machine-local and sync clients handle them badly.
 
+The identity lives in [`brand/`](brand), with the palette, the type and the usage rules in [`brand/brand.md`](brand/brand.md).
+
 ## Support
 
 Bugs and requests: [open an issue](../../issues).
@@ -168,4 +188,11 @@ If it saves you time, you can [buy me a coffee](https://ko-fi.com/AlbyVitt). Ent
 
 ## Licence
 
-MIT. See [LICENSE](LICENSE).
+The code is **MIT**. See [LICENSE](LICENSE). Fork it, ship it, sell it, put it in
+something closed. Keep the copyright notice and we are square.
+
+The **brand is not** covered by that. The mark, the wordmark and the name
+"Highlight Pen" are reserved: see [brand/NOTICE.md](brand/NOTICE.md). Use them to
+talk about this plugin as much as you like. Do not ship a fork under them. Rename
+your fork and give it its own mark, and the code is yours to do as you please
+with.
