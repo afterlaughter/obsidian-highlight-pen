@@ -13,15 +13,9 @@ Switch the pen on, then just select text. It gets styled the moment you release 
 
 Select the same text again and the style comes off. Painting twice is undo.
 
-<!-- To make the video play inline: drag docs/hero.mp4 into any GitHub comment box,
-     copy the https://github.com/user-attachments/... URL it returns, and paste that
-     URL on a line of its own in place of the linked poster below. -->
+https://github.com/user-attachments/assets/fd0950d9-7b5a-445f-a014-f2b36c4d95c8
 
-<p align="center">
-  <a href="docs/hero.mp4"><img src="docs/hero-poster.png" alt="Watch the thirty second tour" width="100%"></a>
-  <br>
-  <sub><b>Thirty seconds, start to finish.</b> Click to play, 1080p.</sub>
-</p>
+<p align="center"><sub><b>Thirty seconds, start to finish.</b> 1080p, no sound.</sub></p>
 
 ## Why you might want it
 
