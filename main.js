@@ -930,14 +930,14 @@ class PenModePlugin extends Plugin {
     const guarded = s.guardMarkup ? protectedRegions(doc) : [];
 
     if (overlapsAny(a, b, guarded)) {
-      this.notify("Pen skipped: that selection touches code, math, a link or frontmatter.");
+      this.notify("Pen skipped: that selection is protected.");
       return;
     }
 
     if (s.guardMarkup) {
       [a, b] = snapToSpans(a, b, emphasisSpans(doc, guarded));
       if (overlapsAny(a, b, guarded)) {
-        this.notify("Pen skipped: that run reaches into code, math or a link.");
+        this.notify("Pen skipped: that run reaches protected text.");
         return;
       }
     }

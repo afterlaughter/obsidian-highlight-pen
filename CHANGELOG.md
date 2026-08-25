@@ -6,6 +6,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project uses [semantic versioning](https://semver.org/spec/v2.0.0.html).
 Obsidian release tags carry no `v` prefix, so the tag for 1.1.0 is `1.1.0`.
 
+## [1.1.1]
+
+### Fixed
+
+- The notice shown when the pen declines to write was long enough to run past
+  the edge of the window, so it read as cut off mid-word. Shortened.
+
+### Changed
+
+- Release assets now carry GitHub artifact attestations, so anyone can verify
+  cryptographically that they were built from this repository.
+- Release notes are taken from this file rather than generated from commit
+  messages.
+
 ## [1.1.0]
 
 First public release.
@@ -74,6 +88,7 @@ for toggling and cycling styles, and a settings tab covering markdown or HTML
 highlight output, italic marker, single-stroke mode, keyboard selections,
 minimum selection length, status bar visibility and editable colour palettes.
 
+[1.1.1]: https://github.com/afterlaughter/obsidian-highlight-pen/releases/tag/1.1.1
 [1.1.0]: https://github.com/afterlaughter/obsidian-highlight-pen/releases/tag/1.1.0
 [1.0.1]: https://github.com/afterlaughter/obsidian-highlight-pen/releases/tag/1.0.1
 [1.0.0]: https://github.com/afterlaughter/obsidian-highlight-pen/releases/tag/1.0.0
